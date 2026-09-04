@@ -116,19 +116,23 @@ ParserRegistry (注册表)
 | 现有Markdown功能不受影响 | ✅ | 迁移函数兼容 |
 | 单元测试覆盖率≥70% | ✅ | 4个测试文件 |
 
-## 后续扩展
+## 已完成的扩展
 
-### 待实现的解析器
-- PPTX解析器 (pptxgenjs)
-- XLSX解析器 (xlsx/sheetjs)
-- 图片OCR解析器 (tesseract.js)
-- 音视频STT解析器 (Whisper API)
+### 已实现的解析器
+- ✅ PPTX导出器 (pptxgenjs) — `src/lib/wps/ppt-generator.ts`，支持莫兰迪配色方案生成真实 .pptx 文件
+- ✅ PDF解析器 (pdf-parse) — `src/lib/parsers/pdf-parser.ts`，运行时可选动态导入
+- ✅ DOCX解析器 (mammoth) — `src/lib/parsers/docx-parser.ts`
+- ✅ 网页解析器 (DOMParser + @mozilla/readability) — `src/lib/read/web-fetcher.ts`
 
-### 待集成的功能
-- AMiner学术搜索
-- 星空图谱可视化
-- Agent记忆机制
-- 高亮标注系统
+### 已集成的功能
+- ✅ AMiner学术搜索 — `src/lib/aminer/` 7个Skill：论文搜索/学者搜索/每日推荐/引文校验/PDF上传核验等，通过Rust后端JWT签名转发
+- ✅ 星空图谱可视化 — `src/stores/constellation-store.ts` + `src/components/graph/`，用星座/星系隐喻可视化知识结构
+- ✅ Agent记忆机制 — `src/lib/agent/` 含思维链捕捉、偏好学习、第一性原理、夜间更新、知识更新器
+- ✅ 高亮标注系统 — `src/components/read/link-receiver.tsx` 左右分栏阅读+画线批注+想法捕捉
+- ✅ WPS助手 — `src/lib/wps/` 含PPT生成(反思评估+导出)、文章写作、风格学习、模板管理
+- ✅ Research全链路 — `src/lib/research/` 问题发现→方法论→证伪引擎，自动探索循环(最多5轮)
+- ✅ LLM API主备切换 — `src/lib/api/` DeepSeek V4 Flash + Agnes 2.5 Flash
+- ✅ 知识库拖拽上传 — Rust后端 `copy_file_to_knowledge` 命令
 
 ## 文件结构
 
