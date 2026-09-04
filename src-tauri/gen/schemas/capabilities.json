@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"默认权限配置 - 授权所有自定义命令和插件，允许内置HTTP服务器origin访问IPC","remote":{"urls":["http://127.0.0.1:18080","http://localhost:18080"]},"local":true,"windows":["main"],"permissions":["core:default","core:event:allow-listen","core:event:allow-unlisten","fs:default","dialog:default","allow-all-commands"]}}

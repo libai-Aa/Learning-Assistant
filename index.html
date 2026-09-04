@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Wiki - 知识管理系统</title>
+  <!-- KaTeX 公式渲染样式（CDN方式，避免构建配置复杂） -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <style>
+    /* AI对话 Markdown 渲染样式 */
+    .md-body h1, .md-body h2, .md-body h3 { margin: 0.6em 0 0.3em; font-weight: 600; line-height: 1.3; }
+    .md-body h1 { font-size: 1.3em; }
+    .md-body h2 { font-size: 1.15em; }
+    .md-body h3 { font-size: 1.05em; }
+    .md-body p { margin: 0.4em 0; }
+    .md-body ul, .md-body ol { margin: 0.4em 0; padding-left: 1.5em; }
+    .md-body li { margin: 0.2em 0; }
+    .md-body code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 3px; font-size: 0.88em; font-family: 'Consolas','Monaco',monospace; }
+    .md-body pre { background: rgba(0,0,0,0.06); padding: 8px 12px; border-radius: 6px; overflow-x: auto; margin: 0.5em 0; }
+    .md-body pre code { background: none; padding: 0; font-size: 0.85em; }
+    .md-body blockquote { border-left: 3px solid rgba(0,0,0,0.15); margin: 0.5em 0; padding: 0.2em 0.8em; color: inherit; opacity: 0.85; }
+    .md-body table { border-collapse: collapse; margin: 0.5em 0; font-size: 0.9em; }
+    .md-body th, .md-body td { border: 1px solid rgba(0,0,0,0.12); padding: 4px 8px; }
+    .md-body th { background: rgba(0,0,0,0.05); font-weight: 600; }
+    .md-body a { color: #3b82f6; text-decoration: underline; }
+    .md-body hr { border: none; border-top: 1px solid rgba(0,0,0,0.1); margin: 0.6em 0; }
+    .md-body img { max-width: 100%; border-radius: 4px; }
+    .md-body strong { font-weight: 700; }
+    .md-body em { font-style: italic; }
+    /* 公众号文章图片显示 */
+    .article-content img { max-width: 100% !important; height: auto !important; visibility: visible !important; display: block !important; margin: 8px auto !important; border-radius: 4px; }
+    .article-content section, .article-content p { max-width: 100% !important; }
+    .article-content { overflow-wrap: break-word; word-wrap: break-word; }
+    .article-content * { max-width: 100% !important; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

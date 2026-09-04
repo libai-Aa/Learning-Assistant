@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+src-tauri/target/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# IDE & tool caches
+.arts/
+.codeartsdoer/
+.codegraph/
+.resultverify/
+.ruff_cache/
+.vscode/
+.idea/
+
+# Archive
+_archive/
+
+# Physical experiment directories (not part of LLM Wiki project)
+camera-analysis/
+comsol-microscope-sim/
+coppeliasim-skill-work/
+qps-fzp-quantitative-phase-imaging/
+research-notes/
+tasks/
+data/
+data_reproduce/
+images_reproduce/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.bak
