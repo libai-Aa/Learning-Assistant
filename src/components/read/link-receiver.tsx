@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import katex from 'katex';
 import { invoke } from '@tauri-apps/api/core';
+import { chat, type ChatMessage } from '@/lib/api/llm-client';
 import { logger } from '@/lib/utils/logger';
 
 const log = logger.module('LinkReceiver');
@@ -142,6 +143,13 @@ export function LinkReceiver() {
   const [floatToolbar, setFloatToolbar] = useState<{ x: number; y: number; text: string } | null>(null);
   // 问题3：列表中批注/想法折叠展开状态（按 link.id）
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  // AI 对话状态
+  interface AiMsg { role: 'user' | 'assistant'; content: string; }
+  const [aiMessages, setAiMessages] = useState<Record<number, AiMsg[]>>({});
+  const [aiInput, setAiInput] = useState<Record<number, string>>({});
+  const [aiLoading, setAiLoading] = useState<Record<number, boolean>>({});
+  const aiScrollRef = useRef<HTMLDivElement>(null);
+
   // 图片内存缓存：key=原始http src, value=base64 data URL
   // 不写回 htmlContent，避免超过 150KB 存储上限导致内容被清空
   const [imgCache, setImgCache] = useState<Record<string, string>>({});
@@ -463,6 +471,66 @@ export function LinkReceiver() {
     setIdeaText(prev => {const n={...prev}; delete n[id]; return n;});
   };
 
+  // AI 对话：基于当前阅读文章内容回答用户问题
+  const handleAiAsk = async (linkId: number) => {
+    const question = aiInput[linkId]?.trim();
+    if (!question || aiLoading[linkId]) return;
+
+    const link = links.find(l => l.id === linkId);
+    if (!link) return;
+
+    // 构造上下文：用 textContent 作为文章背景（截断到前4000字，避免 token 过长）
+    const articleContext = link.textContent.substring(0, 4000);
+
+    const systemPrompt = `你是一位知识渊博的AI助手，正在帮助用户阅读一篇${KIND_LABEL[link.kind]}文章。
+
+文章标题：${link.title}
+文章内容摘要（前4000字）：
+${articleContext}
+
+请基于这篇文章的上下文和背景知识，回答用户的问题。遵循以下原则：
+1. **专业名词作解释**：遇到专业术语/缩写/概念，用简明语言解释其含义。
+2. **结合文章上下文**：优先基于文章内容回答，引用文章中的相关段落或观点。
+3. **来龙去脉讲清楚**：从背景→问题→解释，逻辑链条完整。
+4. **简洁有力**：不啰嗦不注水，抓住问题本质。
+5. **生动形象**：善用类比、举例，让抽象概念具象化。
+
+输出格式：Markdown。公式用LaTeX语法（$...$行内，$$...$$块级）。`;
+
+    const history = aiMessages[linkId] || [];
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+      ...history.map(m => ({ role: m.role, content: m.content }) as ChatMessage),
+      { role: 'user', content: question },
+    ];
+
+    // 先显示用户消息
+    setAiMessages(prev => ({ ...prev, [linkId]: [...(prev[linkId] || []), { role: 'user', content: question }] }));
+    setAiInput(prev => { const n = { ...prev }; delete n[linkId]; return n; });
+    setAiLoading(prev => ({ ...prev, [linkId]: true }));
+
+    try {
+      const result = await chat(messages, { temperature: 0.7 });
+      if (result.success) {
+        setAiMessages(prev => ({ ...prev, [linkId]: [...(prev[linkId] || []), { role: 'assistant', content: result.content }] }));
+      } else {
+        setAiMessages(prev => ({ ...prev, [linkId]: [...(prev[linkId] || []), { role: 'assistant', content: `⚠️ AI 回答失败：${result.error || '未知错误'}` }] }));
+      }
+    } catch (e) {
+      log.error('AI对话失败', { error: String(e) });
+      setAiMessages(prev => ({ ...prev, [linkId]: [...(prev[linkId] || []), { role: 'assistant', content: '⚠️ AI 回答失败，请稍后重试。' }] }));
+    } finally {
+      setAiLoading(prev => ({ ...prev, [linkId]: false }));
+    }
+  };
+
+  // AI 对话区自动滚动到底部
+  useEffect(() => {
+    if (aiScrollRef.current) {
+      aiScrollRef.current.scrollTop = aiScrollRef.current.scrollHeight;
+    }
+  }, [aiMessages, aiLoading]);
+
   const fmtTime = (ts: number) => new Date(ts).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
 
 
@@ -705,6 +773,63 @@ export function LinkReceiver() {
                 {readingLink.ideas.map(i => (
                   <div key={i.id} style={{ fontSize: 12, color: '#4b5563', padding: '4px 8px', background: 'white', borderRadius: 4, border: '1px solid #e5e7eb' }}>💭 {i.text}</div>
                 ))}
+              </div>
+              {/* AI 对话：基于文章内容回答问题 */}
+              <div style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: 12, background: '#fafafa', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>🤖 AI 问答（基于本文内容）</div>
+                {/* 对话历史 */}
+                {(aiMessages[readingLink.id] || []).length > 0 && (
+                  <div ref={aiScrollRef} style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {(aiMessages[readingLink.id] || []).map((msg, idx) => (
+                      <div key={idx} style={{
+                        padding: '6px 10px', borderRadius: 6, fontSize: 13, lineHeight: 1.6,
+                        background: msg.role === 'user' ? '#dbeafe' : '#f0fdf4',
+                        border: `1px solid ${msg.role === 'user' ? '#93c5fd' : '#86efac'}`,
+                        alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                        maxWidth: '92%',
+                        wordBreak: 'break-word',
+                      }}>
+                        <div style={{ fontSize: 10, color: msg.role === 'user' ? '#1e40af' : '#166534', fontWeight: 600, marginBottom: 2 }}>
+                          {msg.role === 'user' ? '你' : 'AI'}
+                        </div>
+                        <div style={{ color: '#1f2937' }}>{msg.content}</div>
+                      </div>
+                    ))}
+                    {aiLoading[readingLink.id] && (
+                      <div style={{ padding: '6px 10px', borderRadius: 6, fontSize: 13, background: '#f0fdf4', border: '1px solid #86efac', alignSelf: 'flex-start', maxWidth: '92%' }}>
+                        <div style={{ fontSize: 10, color: '#166534', fontWeight: 600, marginBottom: 2 }}>AI</div>
+                        <div style={{ color: '#6b7280' }}>思考中...</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* 输入框 */}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    value={aiInput[readingLink.id] || ''}
+                    onChange={e => setAiInput(prev => ({ ...prev, [readingLink.id]: e.target.value }))}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAiAsk(readingLink.id); } }}
+                    placeholder="问个问题，如：xxx是什么意思？"
+                    disabled={aiLoading[readingLink.id]}
+                    style={{ flex: 1, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13, outline: 'none', fontFamily: 'inherit' }}
+                  />
+                  <button
+                    onClick={() => handleAiAsk(readingLink.id)}
+                    disabled={aiLoading[readingLink.id] || !(aiInput[readingLink.id]?.trim())}
+                    style={{
+                      padding: '6px 14px', background: aiLoading[readingLink.id] || !(aiInput[readingLink.id]?.trim()) ? '#d1d5db' : '#8b5cf6',
+                      color: 'white', border: 'none', borderRadius: 6, cursor: aiLoading[readingLink.id] || !(aiInput[readingLink.id]?.trim()) ? 'not-allowed' : 'pointer',
+                      fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
+                    }}
+                  >{aiLoading[readingLink.id] ? '...' : '提问'}</button>
+                </div>
+                {/* 清空对话按钮 */}
+                {(aiMessages[readingLink.id] || []).length > 0 && !aiLoading[readingLink.id] && (
+                  <button
+                    onClick={() => setAiMessages(prev => { const n = { ...prev }; delete n[readingLink.id]; return n; })}
+                    style={{ alignSelf: 'flex-end', padding: '2px 8px', background: 'none', border: '1px solid #e5e7eb', borderRadius: 4, cursor: 'pointer', fontSize: 11, color: '#9ca3af' }}
+                  >清空对话</button>
+                )}
               </div>
             </div>
           </div>
